@@ -31,6 +31,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -119,12 +120,13 @@ public class SearchControllerTest extends AbstractPlainJavaFxTest {
     instance.onAddCriteriaButtonClicked();
 
     Condition condition = mock(Condition.class);
-    when(specificationController.appendTo(any())).thenReturn(Optional.of(condition));
     QBuilder qBuilder = mock(QBuilder.class);
-    when(condition.and()).thenReturn(qBuilder);
     InstantProperty instant = mock(InstantProperty.class);
-    when(qBuilder.instant(any())).thenReturn(instant);
-    when(instant.after(any(Instant.class), false)).thenReturn(condition);
+
+    when(specificationController.appendTo(any())).thenReturn(Optional.of(condition));
+    when(condition.and()).thenReturn(qBuilder);
+    when(qBuilder.instant(eq("endTime"))).thenReturn(eq(instant));
+    when(instant.after(any(Instant.class), eq(false))).thenReturn(condition);
     when(condition.query(any(RSQLVisitor.class))).thenReturn("name==JUnit;endTime=ge=\"2020-06-09T20:20:20.000000000Z\"");
 
     specificationController.propertyField.setValue("name");
