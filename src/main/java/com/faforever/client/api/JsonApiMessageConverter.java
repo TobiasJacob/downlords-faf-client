@@ -28,19 +28,17 @@ public class JsonApiMessageConverter extends AbstractHttpMessageConverter<Object
   @Override
   protected boolean supports(Class<?> clazz) {
     return Collection.class.isAssignableFrom(clazz)
-        || ReflectionUtils.getTypeName(clazz) != null
-        || clazz.equals(JSONAPIDocument.class);
+        || ReflectionUtils.getTypeName(clazz) != null;
   }
 
   @Override
   @SneakyThrows
+  @SuppressWarnings("unchecked")
   protected Object readInternal(Class<?> clazz, HttpInputMessage inputMessage) {
     try (InputStream inputStream = inputMessage.getBody()) {
       JSONAPIDocument<?> document;
       if (Iterable.class.isAssignableFrom(clazz)) {
         document = resourceConverter.readDocumentCollection(inputStream, Object.class);
-      } else if (clazz.equals(JSONAPIDocument.class)) {
-        return resourceConverter.readDocumentCollection(inputStream, Object.class);
       } else {
         document = resourceConverter.readDocument(inputMessage.getBody(), Object.class);
       }
