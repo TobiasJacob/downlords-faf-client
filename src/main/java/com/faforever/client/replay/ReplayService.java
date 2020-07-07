@@ -37,6 +37,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.net.UrlEscapers;
 import com.google.common.primitives.Bytes;
+import javafx.application.Platform;
 import javafx.scene.control.Pagination;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -138,12 +139,19 @@ public class ReplayService {
   private Thread directoryWatcherThread;
   private WatchService watchService;
   protected List<Replay> localReplays = new ArrayList<>();
-  private Pagination pagination;
 
-  public void startLoadingAndWatchingLocalReplays() {
+  public void startLoadingAndWatchingLocalReplays(Pagination pagination) {
     Path replaysDirectory = preferencesService.getReplaysDirectory();
     if (Files.notExists(replaysDirectory)) {
       noCatch(() -> createDirectories(replaysDirectory));
+    }
+
+    String replayFileGlob = clientProperties.getReplay().getReplayFileGlob();
+    try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(replaysDirectory, replayFileGlob)) {
+      final int pageCount = Math.toIntExact(StreamSupport.stream(directoryStream.spliterator(), false).count() / REPLAYS_PER_PAGE);
+      Platform.runLater(() -> pagination.setPageCount(pageCount));
+    } catch (IOException e) {
+      logger.error("Failed loading total amount of replays", e);
     }
 
     LoadLocalReplaysTask loadLocalReplaysTask = applicationContext.getBean(LoadLocalReplaysTask.class);
@@ -153,12 +161,12 @@ public class ReplayService {
       publisher.publishEvent(new LocalReplaysChangedEvent(this, replays, new ArrayList<>()));
     });
 
-//    try {
-//      Optional.ofNullable(directoryWatcherThread).ifPresent(Thread::interrupt);
-//      directoryWatcherThread = startDirectoryWatcher(replaysDirectory);
-//    } catch (IOException e) {
-//      logger.warn("Failed to start watching the local replays directory");
-//    }
+    try {
+      Optional.ofNullable(directoryWatcherThread).ifPresent(Thread::interrupt);
+      directoryWatcherThread = startDirectoryWatcher(replaysDirectory);
+    } catch (IOException e) {
+      logger.warn("Failed to start watching the local replays directory");
+    }
   }
 
   public void loadPage(int pageNum) {
@@ -291,16 +299,17 @@ public class ReplayService {
     int replaysUntil = REPLAYS_PER_PAGE * page;
 
     try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(replaysDirectory, replayFileGlob)) {
-      Stream<Path> stream = StreamSupport.stream(directoryStream.spliterator(), false);
+      Stream<Path> stream = StreamSupport.stream(directoryStream.spliterator(), false)
+          .sorted(Comparator.comparing(path -> noCatch(() -> Files.getLastModifiedTime((Path) path))).reversed());
+
       List<CompletableFuture<Replay>> replayFutures = stream
-          .sorted(Comparator.comparing(path -> noCatch(() -> Files.getLastModifiedTime((Path) path))).reversed())
           .skip(skippedReplays)
           .limit(replaysUntil)
           .map(this::tryLoadingLocalReplay)
           .filter(e -> !e.isCompletedExceptionally())
           .collect(Collectors.toList());
 
-      CompletableFuture[] replayFuturesArray = replayFutures.toArray(new CompletableFuture[replayFutures.size()]);
+      CompletableFuture[] replayFuturesArray = replayFutures.toArray(new CompletableFuture[0]);
       return CompletableFuture.allOf(replayFuturesArray)
           .thenApply(ignoredVoid ->
               replayFutures.stream()

@@ -119,7 +119,7 @@ public class ReplayVaultController extends AbstractViewController<Node> {
   }
 
   protected void loadLocalReplaysInBackground() {
-    replayService.startLoadingAndWatchingLocalReplays();
+    replayService.startLoadingAndWatchingLocalReplays(pagination);
   }
 
 
