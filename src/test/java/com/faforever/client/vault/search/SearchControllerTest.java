@@ -125,7 +125,7 @@ public class SearchControllerTest extends AbstractPlainJavaFxTest {
 
     when(specificationController.appendTo(any())).thenReturn(Optional.of(condition));
     when(condition.and()).thenReturn(qBuilder);
-    when(qBuilder.instant(eq("endTime"))).thenReturn(eq(instant));
+    when(qBuilder.instant(eq("endTime"))).thenReturn(instant);
     when(instant.after(any(Instant.class), eq(false))).thenReturn(condition);
     when(condition.query(any(RSQLVisitor.class))).thenReturn("name==JUnit;endTime=ge=\"2020-06-09T20:20:20.000000000Z\"");
 

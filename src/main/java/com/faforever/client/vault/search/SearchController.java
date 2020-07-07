@@ -43,7 +43,9 @@ public class SearchController implements Controller<Pane> {
   private final UiService uiService;
   private final I18n i18n;
   private final PreferencesService preferencesService;
-
+  /**
+   * The first query element.
+   */
   public LogicalNodeController initialLogicalNodeController;
   public Pane criteriaPane;
   public TextField queryTextField;
