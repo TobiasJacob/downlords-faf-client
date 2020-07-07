@@ -115,7 +115,8 @@ public class ReplayService {
   private static final String FAF_LIFE_PROTOCOL = "faflive";
   private static final String GPGNET_SCHEME = "gpgnet";
   private static final String TEMP_SCFA_REPLAY_FILE_NAME = "temp.scfareplay";
-  private static final long MAX_REPLAYS = 300;
+  //FIXME: this is 5 for testing purposes, should be 100
+  private static final int REPLAYS_PER_PAGE = 5;
 
   private final ClientProperties clientProperties;
   private final PreferencesService preferencesService;
@@ -152,12 +153,22 @@ public class ReplayService {
       publisher.publishEvent(new LocalReplaysChangedEvent(this, replays, new ArrayList<>()));
     });
 
-    try {
-      Optional.ofNullable(directoryWatcherThread).ifPresent(Thread::interrupt);
-      directoryWatcherThread = startDirectoryWatcher(replaysDirectory);
-    } catch (IOException e) {
-      logger.warn("Failed to start watching the local replays directory");
-    }
+//    try {
+//      Optional.ofNullable(directoryWatcherThread).ifPresent(Thread::interrupt);
+//      directoryWatcherThread = startDirectoryWatcher(replaysDirectory);
+//    } catch (IOException e) {
+//      logger.warn("Failed to start watching the local replays directory");
+//    }
+  }
+
+  public void loadPage(int pageNum) {
+    LoadLocalReplaysTask loadLocalReplaysTask = applicationContext.getBean(LoadLocalReplaysTask.class);
+    loadLocalReplaysTask.setPageNum(pageNum);
+    taskService.submitTask(loadLocalReplaysTask).getFuture().thenAccept(replays -> {
+      localReplays.clear();
+      localReplays.addAll(replays);
+      publisher.publishEvent(new LocalReplaysChangedEvent(this, replays, new ArrayList<>()));
+    });
   }
 
   public Collection<Replay> getLocalReplays() {
@@ -276,15 +287,15 @@ public class ReplayService {
       noCatch(() -> createDirectories(replaysDirectory));
     }
 
-    int firstreplay = 5 * page - 5;
-    int lastreplay = 5 * page - 1;
+    int skippedReplays = REPLAYS_PER_PAGE * page - REPLAYS_PER_PAGE;
+    int replaysUntil = REPLAYS_PER_PAGE * page;
 
     try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(replaysDirectory, replayFileGlob)) {
       Stream<Path> stream = StreamSupport.stream(directoryStream.spliterator(), false);
       List<CompletableFuture<Replay>> replayFutures = stream
           .sorted(Comparator.comparing(path -> noCatch(() -> Files.getLastModifiedTime((Path) path))).reversed())
-          .skip(firstreplay)
-          .limit(lastreplay)
+          .skip(skippedReplays)
+          .limit(replaysUntil)
           .map(this::tryLoadingLocalReplay)
           .filter(e -> !e.isCompletedExceptionally())
           .collect(Collectors.toList());
