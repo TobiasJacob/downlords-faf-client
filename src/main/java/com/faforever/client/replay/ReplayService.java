@@ -144,7 +144,7 @@ public class ReplayService {
 
     String replayFileGlob = clientProperties.getReplay().getReplayFileGlob();
     try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(replaysDirectory, replayFileGlob)) {
-      final int pageCount = Math.toIntExact(StreamSupport.stream(directoryStream.spliterator(), false).count() / REPLAYS_PER_PAGE);
+      final int pageCount = (int) Math.ceil((StreamSupport.stream(directoryStream.spliterator(), false).count() / (double) REPLAYS_PER_PAGE));
       Platform.runLater(() -> pagination.setPageCount(pageCount));
     } catch (IOException e) {
       logger.error("Failed loading total amount of replays", e);
