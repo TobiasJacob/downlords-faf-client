@@ -104,7 +104,11 @@ public class ReplayVaultController extends AbstractViewController<Node> {
     durationColumn.setCellFactory(this::durationCellFactory);
 
     pagination.managedProperty().bind(pagination.visibleProperty());
-    pagination.currentPageIndexProperty().addListener((observable, oldValue, newValue) -> replayService.loadPage(newValue.intValue() + 1));
+    pagination.currentPageIndexProperty().addListener((observable, oldValue, newValue) -> {
+      if (newValue.intValue() != oldValue.intValue()) {
+        replayService.loadPage(newValue.intValue() + 1);
+      }
+    });
   }
 
   @Override

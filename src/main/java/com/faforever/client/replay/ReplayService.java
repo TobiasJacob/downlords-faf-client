@@ -115,8 +115,7 @@ public class ReplayService {
   private static final String FAF_LIFE_PROTOCOL = "faflive";
   private static final String GPGNET_SCHEME = "gpgnet";
   private static final String TEMP_SCFA_REPLAY_FILE_NAME = "temp.scfareplay";
-  //FIXME: this is 5 for testing purposes, should be 100
-  private static final int REPLAYS_PER_PAGE = 2;
+  private static final int REPLAYS_PER_PAGE = 100;
 
   private final ClientProperties clientProperties;
   private final PreferencesService preferencesService;
