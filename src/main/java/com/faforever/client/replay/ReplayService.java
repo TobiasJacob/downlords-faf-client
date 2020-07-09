@@ -117,7 +117,7 @@ public class ReplayService {
   private static final String GPGNET_SCHEME = "gpgnet";
   private static final String TEMP_SCFA_REPLAY_FILE_NAME = "temp.scfareplay";
   //FIXME: this is 5 for testing purposes, should be 100
-  private static final int REPLAYS_PER_PAGE = 5;
+  private static final int REPLAYS_PER_PAGE = 2;
 
   private final ClientProperties clientProperties;
   private final PreferencesService preferencesService;
@@ -170,12 +170,12 @@ public class ReplayService {
   }
 
   public void loadPage(int pageNum) {
-    LoadLocalReplaysTask loadLocalReplaysTask = applicationContext.getBean(LoadLocalReplaysTask.class);
-    loadLocalReplaysTask.setPageNum(pageNum);
+    LoadLocalReplaysTask loadLocalReplaysTask = applicationContext.getBean(LoadLocalReplaysTask.class).setPageNum(pageNum);
     taskService.submitTask(loadLocalReplaysTask).getFuture().thenAccept(replays -> {
+      List<Replay> oldReplays = new ArrayList<>(localReplays);
       localReplays.clear();
       localReplays.addAll(replays);
-      publisher.publishEvent(new LocalReplaysChangedEvent(this, replays, new ArrayList<>()));
+      publisher.publishEvent(new LocalReplaysChangedEvent(this, replays, oldReplays));
     });
   }
 
@@ -296,7 +296,6 @@ public class ReplayService {
     }
 
     int skippedReplays = REPLAYS_PER_PAGE * page - REPLAYS_PER_PAGE;
-    int replaysUntil = REPLAYS_PER_PAGE * page;
 
     try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(replaysDirectory, replayFileGlob)) {
       Stream<Path> stream = StreamSupport.stream(directoryStream.spliterator(), false)
@@ -304,7 +303,7 @@ public class ReplayService {
 
       List<CompletableFuture<Replay>> replayFutures = stream
           .skip(skippedReplays)
-          .limit(replaysUntil)
+          .limit(REPLAYS_PER_PAGE)
           .map(this::tryLoadingLocalReplay)
           .filter(e -> !e.isCompletedExceptionally())
           .collect(Collectors.toList());
@@ -316,7 +315,6 @@ public class ReplayService {
                   .map(CompletableFuture::join)
                   .filter(Objects::nonNull)
                   .collect(Collectors.toList()));
-
     }
   }
 

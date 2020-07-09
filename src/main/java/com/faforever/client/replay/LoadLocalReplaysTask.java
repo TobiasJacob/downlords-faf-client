@@ -31,11 +31,8 @@ public class LoadLocalReplaysTask extends CompletableTask<Collection<Replay>> {
     return replayService.loadLocalReplays(pageNum).get();
   }
 
-  public int getPageNum() {
-    return pageNum;
-  }
-
-  public void setPageNum(int pageNum) {
+  public LoadLocalReplaysTask setPageNum(int pageNum) {
     this.pageNum = pageNum;
+    return this;
   }
 }
